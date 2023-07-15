@@ -1,8 +1,8 @@
-import subprocess
 import cv2
 import numpy as np
 import time
 import chess
+import chess.engine
 
 PATTERN_SIZE = (7, 7)
 RED_LOWER_COLOR = np.array([0, 70, 50])
@@ -114,7 +114,6 @@ def make_move(vboard, cached_board, lib_board):
     cached_str = [[str(piece) for piece in row] for row in cached_board]
 
     if vboard_str != cached_str:
-        print("A change has occurred")
         changes = 0
 
         for j in range(8):
@@ -122,10 +121,11 @@ def make_move(vboard, cached_board, lib_board):
                 if cached_str[j][i] != vboard_str[j][i]:
                     changes += 1  # Increment changes if a difference is detected
 
-        print("Total changes: ", changes)
-        
         first_change = None
         second_change = None
+
+        if changes == 1:
+            print(board)
         
         if changes == 2:
             for i in range(8):
@@ -135,37 +135,32 @@ def make_move(vboard, cached_board, lib_board):
                     elif second_change is None and cached_str[i][j] != vboard_str[i][j]:
                         second_change = chess.square(j, 7-i)
                     else:
-                        continue
+                        continue                            
+            try:
+                first_possible_move = chess.Move.from_uci(chess.square_name(first_change) + chess.square_name(second_change))
+                second_possible_move = chess.Move.from_uci(chess.square_name(second_change) + chess.square_name(first_change))
+            except Exception:
+                print("Illegal move, ensure when capturing to lift both pieces")
+                print("Put pieces back!")
+                print (board)
+                return cached_board
+            
 
-                            
-        try:
-            first_possible_move = chess.Move.from_uci(chess.square_name(first_change) + chess.square_name(second_change))
-            second_possible_move = chess.Move.from_uci(chess.square_name(second_change) + chess.square_name(first_change))
-        except Exception:
-            print("Illegal move, ensure when capturing to lift both pieces")
-            print("Put pieces back!")
-            print_board (cached_board)
-            return cached_board
-        
-
-        print(first_change)
-        print(second_change)
-
-        if lib_board.is_legal(first_possible_move):
-            lib_board.push(first_possible_move)
-            print("A piece moved from " + chess.square_name(first_change) + " to " + chess.square_name(second_change))
-            # Change the piece at the destination square
-            vboard[7 - chess.square_rank(second_change)][chess.square_file(second_change)] = 'P'  # chess.square_rank() and chess.square_file() gives rank and file of a square respectively.
-            return vboard.copy()  # Update cached board
-        elif lib_board.is_legal(second_possible_move):
-            lib_board.push(second_possible_move)
-            print("A piece moved from " + chess.square_name(second_change) + " to " + chess.square_name(first_change))
-            # Change the piece at the destination square
-            vboard[7 - chess.square_rank(first_change)][chess.square_file(first_change)] = 'P'
-            return vboard.copy()  # Update cached board
-        else:
-            print("Illegal moves, put pieces back!")
-            print_board (cached_board)
+            if lib_board.is_legal(first_possible_move):
+                lib_board.push(first_possible_move)
+                print("A piece moved from " + chess.square_name(first_change) + " to " + chess.square_name(second_change))
+                # Change the piece at the destination square
+                vboard[7 - chess.square_rank(second_change)][chess.square_file(second_change)] = 'P'  # chess.square_rank() and chess.square_file() gives rank and file of a square respectively.
+                return vboard.copy()  # Update cached board
+            elif lib_board.is_legal(second_possible_move):
+                lib_board.push(second_possible_move)
+                print("A piece moved from " + chess.square_name(second_change) + " to " + chess.square_name(first_change))
+                # Change the piece at the destination square
+                vboard[7 - chess.square_rank(first_change)][chess.square_file(first_change)] = 'P'
+                return vboard.copy()  # Update cached board
+            else:
+                print("Illegal moves, put pieces back!")
+                print (board)
 
     return cached_board
 
@@ -177,9 +172,8 @@ def board_to_fen(board):
     fen += " w KQkq - 0 1"
     return fen
 
-
+engine = chess.engine.SimpleEngine.popen_uci("./stockfish/stockfish-windows-x86-64-avx2.exe")
 board = chess.Board()
-
 cached_board = None
 
 while True:
@@ -188,6 +182,10 @@ while True:
     if ret:
         square_positions = find_squares(corners, PATTERN_SIZE, image)
      
+        if board.turn == chess.BLACK:
+            engine.configure({"Skill Level": 1})
+            result = engine.play(board, chess.engine.Limit(time=.1))
+            print(result.move)
         # cv2.imshow("Detected Chessboard", image)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
