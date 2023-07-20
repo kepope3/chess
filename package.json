@@ -1,0 +1,22 @@
+{
+  "name": "chesseye",
+  "version": "1.0.0",
+  "description": "APT INSTALL OPENCV INSTALL NODE INSTALL BLUETOOTH INSTALL pyenv and get 2.7.18 (BLENO WONT WORK OHTERWISE) npm init install noble",
+  "main": "bserver.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kepope3/chesseye.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kepope3/chesseye/issues"
+  },
+  "homepage": "https://github.com/kepope3/chesseye#readme",
+  "dependencies": {
+    "bleno": "^0.5.0"
+  }
+}

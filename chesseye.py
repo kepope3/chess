@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import time
 import chess
-import chess.engine
+import picamera
 
 PATTERN_SIZE = (7, 7)
 RED_LOWER_COLOR = np.array([0, 70, 50])
@@ -37,7 +37,9 @@ def find_squares(corners, pattern_size, image):
     y_max = min(y_max, image.shape[0])
 
     # Draw the adjusted bounding rectangle
-    # cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 0, 0), 2)
+    cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 0, 0), 2)
+    
+   
 
     # Store the individual square positions
     square_positions = []
@@ -50,32 +52,42 @@ def find_squares(corners, pattern_size, image):
             square_positions.append((top_left, bottom_right))
 
             # Draw the individual squares
-            # cv2.rectangle(image, top_left, bottom_right, (0, 0, 0), 1)
+            cv2.rectangle(image, top_left, bottom_right, (0, 0, 0), 1)
             # Draw the traditional chess coordinates
             # 'a' is ASCII 97 and '1' is ASCII 49, hence using them for respective axes
-            # coord = chr(97 + j) + str(8 - i)
-            # cv2.putText(image, coord, (top_left[0] + 5, top_left[1] + 25), cv2.FONT_HERSHEY_SIMPLEX,
-            #             0.7, (0, 0, 0), 2)
+            coord = chr(97 + j) + str(8 - i)
+            cv2.putText(image, coord, (top_left[0] + 5, top_left[1] + 25), cv2.FONT_HERSHEY_SIMPLEX,
+                         0.7, (0, 0, 0), 2)
 
     return square_positions
 
 
 def get_chessboard():
     # Load the chessboard image
-    image = cv2.imread("chessboard.jpg")
-
+    
+    camera.resolution = (600, 300)
+    camera.start_preview()
+    time.sleep(20)
+    camera.stop_preview()
+    camera.rotation = 0
+    
+    #image = np.empty((camera.resolution[1], camera.resolution[0], 3), dtype=np.uint8)
+    camera.capture("chessimage.jpg")
+    
+    image = cv2.imread("chessimage.jpg")
+    
+    frame = cv2.resize(image, None, fx=0.5, fy=0.5)
+   
     # Convert the image to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Define the chessboard pattern size
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Find the chessboard corners
-    ret, corners = cv2.findChessboardCornersSB(
-        gray, PATTERN_SIZE, flags=cv2.CALIB_CB_EXHAUSTIVE)
+    ret, corners = cv2.findChessboardCorners(
+        gray, PATTERN_SIZE, flags=cv2.CALIB_CB_FAST_CHECK)
 
     return ret, corners, image
 
-def detect_pieces(hsv):
+def detect_pieces(hsv, square_positions):
     # Create an empty 8x8 board
     virtual_board = [['.' for _ in range(8)] for _ in range(8)]
 
@@ -172,8 +184,9 @@ def board_to_fen(board):
     fen += " w KQkq - 0 1"
     return fen
 
-engine = chess.engine.SimpleEngine.popen_uci("./stockfish/stockfish-windows-x86-64-avx2.exe")
+# engine = chess.engine.SimpleEngine.popen_uci("./stockfish/stockfish-windows-x86-64-avx2.exe")
 board = chess.Board()
+camera = picamera.PiCamera()
 cached_board = None
 
 while True:
@@ -181,11 +194,15 @@ while True:
 
     if ret:
         square_positions = find_squares(corners, PATTERN_SIZE, image)
+        
+        cv2.imshow("cheesboard", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
      
-        if board.turn == chess.BLACK:
-            engine.configure({"Skill Level": 1})
-            result = engine.play(board, chess.engine.Limit(time=.1))
-            print(result.move)
+        # if board.turn == chess.BLACK:
+            # engine.configure({"Skill Level": 1})
+            # result = engine.play(board, chess.engine.Limit(time=.1))
+            # print(result.move)
         # cv2.imshow("Detected Chessboard", image)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
@@ -193,7 +210,7 @@ while True:
         # Convert the image to HSV for color detection
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-        vboard = detect_pieces(hsv)        
+        vboard = detect_pieces(hsv, square_positions)        
 
         #init setup
         if cached_board is None:
@@ -214,4 +231,3 @@ while True:
     else:
         print("Chessboard not found.")
 
-    time.sleep(1)
