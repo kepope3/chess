@@ -16,6 +16,7 @@ imgpoints = [] # 2d points in image plane.
 images = glob.glob('images/*.jpg') # Enter your images' directory
 
 for fname in images:
+    print("processing ", fname)
     img = cv2.imread(fname)
     if _img_shape == None:
         _img_shape = img.shape[:2]
@@ -26,16 +27,17 @@ for fname in images:
     ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
 
     if ret == True:
+        print("found corners for ", fname)
         objpoints.append(objp)
         cv2.cornerSubPix(gray,corners,(3,3),(-1,-1),subpix_criteria)
         imgpoints.append(corners)
+    else:
+        print("Did not find corners for ", fname);
 
-N_OK = len(objpoints)
 K = np.zeros((3, 3))
 D = np.zeros((4, 1))
-rvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_OK)]
-tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_OK)]
-rms, _, _, _, _ = cv2.fisheye.calibrate(objpoints, imgpoints, gray.shape[::-1], K, D, rvecs, tvecs, calibration_flags, (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-6))
+
+np.savez("calibration_data_npz", K=K, D=D)
 
 for img in images:
     img = cv2.imread(img)
