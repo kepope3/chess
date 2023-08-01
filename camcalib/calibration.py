@@ -34,8 +34,12 @@ for fname in images:
     else:
         print("Did not find corners for ", fname);
 
+N_OK = len(objpoints)
 K = np.zeros((3, 3))
 D = np.zeros((4, 1))
+rvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_OK)]
+tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_OK)]
+rms, _, _, _, _ = cv2.fisheye.calibrate(objpoints, imgpoints, gray.shape[::-1], K, D, rvecs, tvecs, calibration_flags, (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-6))
 
 np.savez("calibration_data_npz", K=K, D=D)
 
