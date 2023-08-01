@@ -11,17 +11,21 @@ x, y, w, h = crop_rectangle
 # Crop the image
 cropped_image = image[y:y+h, x:x+w]
 
-# Convert to grayscale
-gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+# Convert to HSV for better color isolation
+hsv_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2HSV)
 
-bilateral_filtered_image = cv2.bilateralFilter(gray, 5, 75, 75)
+# Define color range for red pieces (remember HSV color space is different!)
+lower_red1 = np.array([0, 50, 50])
+upper_red1 = np.array([10, 255, 255])
+lower_red2 = np.array([160, 50, 50])
+upper_red2 = np.array([180, 255, 255])
 
-# Apply Gaussian blur to reduce noise and avoid false circle detection
-gray_blur = cv2.GaussianBlur(bilateral_filtered_image, (15, 15), 0)
+# Threshold the HSV image to get only red colors
+red_mask1 = cv2.inRange(hsv_image, lower_red1, upper_red1)
+red_mask2 = cv2.inRange(hsv_image, lower_red2, upper_red2)
 
-# Threshold the gray image to get only darker colors
-_, threshold = cv2.threshold(gray_blur, 50, 255, cv2.THRESH_BINARY_INV)
-
+# Combine the two masks
+red_mask = cv2.bitwise_or(red_mask1, red_mask2)
 # Define the grid dimensions
 grid_size = 8
 
@@ -29,25 +33,25 @@ grid_size = 8
 step_size_x = w // grid_size
 step_size_y = h // grid_size
 
-# Draw the grid and check for chess pieces
+# Draw the grid and check for red pieces
 for i in range(0, w, step_size_x):
     for j in range(0, h, step_size_y):
         # Extract the cell
-        cell = threshold[j:j+step_size_y, i:i+step_size_x]
+        cell = red_mask[j:j+step_size_y, i:i+step_size_x]
 
-        # Calculate the proportion of dark pixels
-        white_pixels = np.sum(cell == 0)
+        # Calculate the proportion of red pixels
+        red_pixels = np.sum(cell == 255)
         total_pixels = np.size(cell)
-        if white_pixels / total_pixels < 0.7:  
+        if red_pixels / total_pixels > 0.065:  # Modify this threshold based on your specific needs
             cv2.rectangle(cropped_image, (i, j), (i+step_size_x, j+step_size_y), (0, 0, 255), 2)
 
-    cv2.line(threshold, (i, 0), (i, h), (0, 255, 0), 1)
+    cv2.line(red_mask, (i, 0), (i, h), (0, 255, 0), 1)
 
 for i in range(0, h, step_size_y):
-    cv2.line(threshold, (0, i), (w, i), (0, 255, 0), 1)
+    cv2.line(red_mask, (0, i), (w, i), (0, 255, 0), 1)
 
-#display threshold image
-cv2.imshow("threshold image", threshold)
+#display red mask image
+cv2.imshow("Red mask", red_mask)
 cv2.waitKey(0)
 
 # Display the cropped image
