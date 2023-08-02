@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Read the image
-image = cv2.imread('./camcalib/undistorted_image2.jpg')
+image = cv2.imread('./camcalib/undistorted_image.jpg')
 
 # Specify the crop dimensions (x, y, w, h)
 crop_rectangle = (90, 0, 440, 450)
@@ -42,7 +42,7 @@ for i in range(0, w, step_size_x):
         # Calculate the proportion of red pixels
         red_pixels = np.sum(cell == 255)
         total_pixels = np.size(cell)
-        if red_pixels / total_pixels > 0.065:  # Modify this threshold based on your specific needs
+        if red_pixels / total_pixels > 0.020:  # Modify this threshold based on your specific needs
             cv2.rectangle(cropped_image, (i, j), (i+step_size_x, j+step_size_y), (0, 0, 255), 2)
 
     cv2.line(red_mask, (i, 0), (i, h), (0, 255, 0), 1)
