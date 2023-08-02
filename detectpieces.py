@@ -1,15 +1,36 @@
 import cv2
 import numpy as np
+import picamera
+import time
 
-# Read the image
-image = cv2.imread('./camcalib/undistorted_image.jpg')
+camera = picamera.PiCamera()
+
+camera.resolution = (640, 480)
+camera.start_preview()
+time.sleep(20)
+camera.stop_preview()
+camera.rotation = 0
+    
+    #image = np.empty((camera.resolution[1], camera.resolution[0], 3), dtype=np.uint8)
+camera.capture("chessimage.jpg")
+    
+image = cv2.imread("chessimage.jpg")
+
+# Load calibration data
+with np.load('./camcalib/calibration_data_npz.npz') as data:
+    K = data['K']
+    D = data['D']
+
+h, w = image.shape[:2]
+map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, (w,h), cv2.CV_16SC2)
+undistorted_img = cv2.remap(image, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
 # Specify the crop dimensions (x, y, w, h)
-crop_rectangle = (90, 0, 440, 450)
+crop_rectangle = (70, 10, 450, 450)
 x, y, w, h = crop_rectangle
 
 # Crop the image
-cropped_image = image[y:y+h, x:x+w]
+cropped_image = undistorted_img[y:y+h, x:x+w]
 
 # Convert to HSV for better color isolation
 hsv_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2HSV)
